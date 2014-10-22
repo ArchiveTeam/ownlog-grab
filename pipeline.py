@@ -15,7 +15,6 @@ import subprocess
 import sys
 import time
 import string
-import urllib
 
 import seesaw
 from seesaw.externalprocess import WgetDownload
@@ -58,27 +57,10 @@ if not WGET_LUA:
 #
 # Update this each time you make a non-cosmetic change.
 # It will be added to the WARC files and reported to the tracker.
-VERSION = "20141017.09"
-USER_AGENTS = [
-    'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0; SLCC1; .NET CLR 2.0.50727; Media Center PC 5.0; .NET CLR 3.5.30729; .NET CLR 3.0.30618; MAXTHON 2.0)',
-    'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0)',
-    'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)',
-    'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)',
-    'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.143 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.103 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.94 Safari/537.36',
-]
-TRACKER_ID = 'rogal'
-TRACKER_HOST = '192.168.93.129:9080'
-
-ACCEPT_LANGUAGE_HEADERS = [
-    "Accept-Language: en-CA,en;q=0.8,en-US;q=0.6,en-GB;q=0.4",
-    "Accept-Language: en-US,en;q=0.8,en-CA;q=0.6,en-GB;q=0.4",
-    "Accept-Language: en-GB,en;q=0.8,en-US;q=0.6,en-CA;q=0.4",
-    "Accept-Language: en-US,en;q=0.8,en-GB;q=0.6,en-CA;q=0.4",
-    "Accept-Language: en-US,en;q=0.8,en-US;q=0.6,en-US;q=0.4",
-]
+VERSION = "20141015.01"
+USER_AGENT = 'ArchiveTeam'
+TRACKER_ID = 'ownlog'
+TRACKER_HOST = '192.168.93.129'
 
 
 ###########################################################################
@@ -94,8 +76,6 @@ class CheckIP(SimpleTask):
 
     def process(self, item):
         # NEW for 2014! Check if we are behind firewall/proxy
-        # Check if we are banned from twitpic
-       
 
         if self._counter <= 0:
             item.log_output('Checking IP address.')
@@ -111,9 +91,9 @@ class CheckIP(SimpleTask):
             if len(ip_set) != 6:
                 item.log_output('Got IP addresses: {0}'.format(ip_set))
                 item.log_output(
-                    'You are behind a firewall or proxy. That is a big no-no!')
+                    'Are you behind a firewall/proxy? That is a big no-no!')
                 raise Exception(
-                    'You are behind a firewall or proxy. That is a big no-no!')
+                    'Are you behind a firewall/proxy? That is a big no-no!')
 
         # Check only occasionally
         if self._counter <= 0:
@@ -129,7 +109,7 @@ class PrepareDirectories(SimpleTask):
 
     def process(self, item):
         item_name = item["item_name"]
-        escaped_item_name = item_name.replace(':', '_').replace('/', '_')
+        escaped_item_name = item_name.replace(':', '_').replace('/', '_').replace('~', '_')
         dirname = "/".join((item["data_dir"], escaped_item_name))
 
         if os.path.isdir(dirname):
@@ -184,7 +164,7 @@ class WgetArgs(object):
     def realize(self, item):
         wget_args = [
             WGET_LUA,
-            "-U", random.choice(USER_AGENTS),
+            "-U", USER_AGENT,
             "-nv",
             "--lua-script", "ownlog.lua",
             "-o", ItemInterpolation("%(item_dir)s/wget.log"),
@@ -192,40 +172,44 @@ class WgetArgs(object):
             "--output-document", ItemInterpolation("%(item_dir)s/wget.tmp"),
             "--truncate-output",
             "-e", "robots=off",
-            "-w", "1",
-            "--no-cookies",
             "--rotate-dns",
-            # Do download recursive, we're checking the urls in twitpic.lua
             "--recursive", "--level=inf",
             "--no-parent",
             "--page-requisites",
             "--timeout", "30",
             "--tries", "inf",
+            "--domains", ItemInterpolation("%(item_value)s"),
             "--span-hosts",
             "--waitretry", "30",
-            "--domains", ItemInterpolation("%(item_name)s"),
             "--warc-file", ItemInterpolation("%(item_dir)s/%(warc_file_base)s"),
             "--warc-header", "operator: Archive Team",
-            "--warc-header", "ownlog-dld-script-version: " + VERSION,
-            "--warc-header", ItemInterpolation("ownlog-user: %(item_name)s"),
-            "--header", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "--header", "DNT: 1",
-            "--header", random.choice(ACCEPT_LANGUAGE_HEADERS), 
-            ItemInterpolation("http://%(item_name)s")
+            "--warc-header", "halo-dld-script-version: " + VERSION,
+            "--warc-header", ItemInterpolation("halo-user: %(item_value)s"),
         ]
         
         item_name = item['item_name']
-	item['item_type']='blog'
-	item['item_value']= item_name
+        assert ':' in item_name
+        item_type, item_value = item_name.split(':', 1)
+        
+        item['item_type'] = item_type
+        item['item_value'] = item_value
+        
+        assert item_type in ("ownlog")
+        
+        if item_type == 'ownlog':
 
-         
+                wget_args.append("http://" + str(item['item_value']))
+            
+        else:
+            raise Exception('Unknown item')
+        
         if 'bind_address' in globals():
             wget_args.extend(['--bind-address', globals()['bind_address']])
             print('')
             print('*** Wget will bind address at {0} ***'.format(
                 globals()['bind_address']))
             print('')
-
+            
         return realize(wget_args, item)
 
 ###########################################################################
@@ -234,14 +218,12 @@ class WgetArgs(object):
 # This will be shown in the warrior management panel. The logo should not
 # be too big. The deadline is optional.
 project = Project(
-    title="ownlog.com",
+    title="ownlog",
     project_html="""
-        <img class="project-logo" alt="Project logo" src="http://archiveteam.org/images/6/68/Twitpic-logo.png" height="50px" title=""/>
+
         <h2>ownlog.com <span class="links"><a href="http://ownlog.com/">Website</a> &middot; <a href="http://tracker.archiveteam.org/ownlog/">Leaderboard</a></span></h2>
-        <p>Archiving images and webpages from ownlog.com.</p>
-     
-    """,
-    
+        <p>Archiving all blogs from ownlog.com platform</p>
+    """
 )
 
 pipeline = Pipeline(
@@ -252,12 +234,11 @@ pipeline = Pipeline(
     WgetDownload(
         WgetArgs(),
         max_tries=2,
-        accept_on_exit_code=[0, 4, 7, 8],
+        accept_on_exit_code=[0, 8],
         env={
             "item_dir": ItemValue("item_dir"),
             "item_value": ItemValue("item_value"),
             "item_type": ItemValue("item_type"),
-            "downloader": downloader
         }
     ),
     PrepareStatsForTracker(
