@@ -50,8 +50,10 @@ wget.callbacks.download_child_p = function(urlpos, parent, depth, start_url_pars
 
       end
 
-  return verdict
+
 end
+
+     return verdict
 
 end
 
