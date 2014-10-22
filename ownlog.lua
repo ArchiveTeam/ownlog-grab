@@ -45,12 +45,12 @@ wget.callbacks.download_child_p = function(urlpos, parent, depth, start_url_pars
 
       if urlpos["link_inline_p"] == 1 then
         return true
-
       else
         return verdict
 
       end
-  
+
+  return verdict
 end
 
 end
