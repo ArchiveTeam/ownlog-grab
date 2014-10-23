@@ -105,7 +105,7 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
         downloaded[url.url] = true
       end
 
-      return wget.actions.NOTHING
+      return wget.actions.EXIT
   end
 
   
