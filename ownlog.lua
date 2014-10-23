@@ -8,6 +8,7 @@ local item_type = os.getenv('item_type')
 local item_value = os.getenv('item_value')
 
 local downloaded = {}
+local external_resources = {}
 
 load_json_file = function(file)
   if file then
@@ -45,7 +46,8 @@ wget.callbacks.download_child_p = function(urlpos, parent, depth, start_url_pars
 
       -- download all external files refenrenced in a blog - usually photos from other sites
 
-      if urlpos["link_inline_p"] == 1 then
+      if urlpos["link_inline_p"] == 1 and reason == "DOMAIN_NOT_ACCEPTED" then
+          external_resources[url] = true
         return true
       else
         return verdict
@@ -84,12 +86,16 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
       return wget.actions.NOTHING
   end
 
--- ignore links pointing to non-exitent hosts. If url_count > 1 it means that we
--- were able to retrieve something before and our downloading host works fine
+-- ignore errors related to external resources
 
-  if err == "HOSTERR" and url_count >1 then
+  if (status_code == 0 or status_code >= 500 or (status_code >= 400 and status_code ~= 404 and status_code ~= 403))
+          and external_resources[url["url"]] == true then
 
-      io.stdout:write("Hostname resolving error for " .. url["url"] .. "....ignoring\n")
+      io.stdout:write("Error for external resource " .. url["url"] .. "....ignoring\n")
+
+      if status_code == 0 then
+          io.stdout:write("Error code: " .. err .. "\n")
+      end
       io.stdout:flush()
 
       if string.match(url.url, "https://") then
@@ -128,6 +134,7 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     else
       return wget.actions.CONTINUE
     end
+
   elseif status_code == 0 then
     io.stdout:write("\nServer returned "..http_stat.statcode..". Sleeping.\n")
     io.stdout:flush()
