@@ -10,6 +10,8 @@ local item_value = os.getenv('item_value')
 local downloaded = {}
 local external_resources = {}
 
+local internal_abort = 0
+
 load_json_file = function(file)
   if file then
     local f = io.open(file)
@@ -130,6 +132,7 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     if tries >= 20 then
       io.stdout:write("\nI give up...\n")
       io.stdout:flush()
+      internal_abort = 1
       return wget.actions.ABORT
     else
       return wget.actions.CONTINUE
@@ -146,6 +149,7 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     if tries >= 10 then
       io.stdout:write("\nI give up...\n")
       io.stdout:flush()
+      internal_abort = 1
       return wget.actions.ABORT
     else
       return wget.actions.CONTINUE
@@ -168,4 +172,14 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
   end
 
   return wget.actions.NOTHING
+end
+
+
+wget.callbacks.before_exit = function(exit_status, exit_status_string)
+    if internal_abort == 1 then
+        return exit_status
+    else
+    -- return success, this is workaround for returning success even if external resources from a website fail to load
+        return wget.exits.SUCCESS
+    end
 end

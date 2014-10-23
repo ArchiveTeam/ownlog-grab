@@ -59,8 +59,8 @@ if not WGET_LUA:
 # It will be added to the WARC files and reported to the tracker.
 VERSION = "20141015.01"
 USER_AGENT = 'ArchiveTeam'
-TRACKER_ID = 'ownlog'
-TRACKER_HOST = '192.168.93.129'
+TRACKER_ID = 'rogal'
+TRACKER_HOST = '192.168.93.129:9080'
 
 
 ###########################################################################

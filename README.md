@@ -1,7 +1,7 @@
 ownlog-grab
 =============
 
-More information about the archiving project can be found on the ArchiveTeam wiki: [Halo](http://archiveteam.org/index.php?title=Ownlog.com)
+More information about the archiving project can be found on the ArchiveTeam wiki: [Ownlog.com](http://archiveteam.org/index.php?title=Ownlog.com)
 
 Setup instructions
 =========================
