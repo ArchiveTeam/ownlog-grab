@@ -43,6 +43,8 @@ wget.callbacks.download_child_p = function(urlpos, parent, depth, start_url_pars
   
   if item_type == "ownlog" then
 
+      -- download all external files refenrenced in a blog - usually photos from other sites
+
       if urlpos["link_inline_p"] == 1 then
         return true
       else
@@ -69,7 +71,7 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
 
 
   if err == "AUTHFAILED" then
-      io.stdout.write("Authentication required for " .. url["url"] .. "....ignoring\n")
+      io.stdout:write("Authentication required for " .. url["url"] .. "....ignoring\n")
       io.stdout:flush()
 
       if string.match(url.url, "https://") then
@@ -82,7 +84,23 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
       return wget.actions.NOTHING
   end
 
+-- ignore links pointing to non-exitent hosts. If url_count > 1 it means that we
+-- were able to retrieve something before and our downloading host works fine
 
+  if err == "HOSTERR" and url_count >1 then
+
+      io.stdout:write("Hostname resolving error for " .. url["url"] .. "....ignoring\n")
+      io.stdout:flush()
+
+      if string.match(url.url, "https://") then
+        local newurl = string.gsub(url.url, "https://", "http://")
+        downloaded[newurl] = true
+      else
+        downloaded[url.url] = true
+      end
+
+      return wget.actions.NOTHING
+  end
 
   
   if (status_code >= 200 and status_code <= 399) or status_code == 403 then
