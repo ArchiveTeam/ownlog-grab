@@ -178,13 +178,13 @@ class WgetArgs(object):
             "--page-requisites",
             "--timeout", "30",
             "--tries", "inf",
-            "--domains", ItemInterpolation("%(item_value)s"),
+            "--domains", "ownlog.com,fotolog.pl",
             "--span-hosts",
             "--waitretry", "30",
             "--warc-file", ItemInterpolation("%(item_dir)s/%(warc_file_base)s"),
             "--warc-header", "operator: Archive Team",
-            "--warc-header", "halo-dld-script-version: " + VERSION,
-            "--warc-header", ItemInterpolation("halo-user: %(item_value)s"),
+            "--warc-header", "ownlog-dld-script-version: " + VERSION,
+            "--warc-header", ItemInterpolation("ownlog-user: %(item_name)s"),
         ]
         
         item_name = item['item_name']
@@ -194,11 +194,12 @@ class WgetArgs(object):
         item['item_type'] = item_type
         item['item_value'] = item_value
         
-        assert item_type in ("ownlog")
+        assert item_type in ("ownlog", "fotolog")
         
         if item_type == 'ownlog':
-
-                wget_args.append("http://" + str(item['item_value']))
+            wget_args.append("http://{0}.ownlog.com".format(item_value))
+        elif item_type == 'fotolog':
+            wget_args.append("http://{0}.fotolog.pl".format(item_value))
             
         else:
             raise Exception('Unknown item')
