@@ -45,21 +45,27 @@ wget.callbacks.download_child_p = function(urlpos, parent, depth, start_url_pars
   end
   
   if item_type == "ownlog" then
-
-      -- download all external files refenrenced in a blog - usually photos from other sites
-
-      if urlpos["link_inline_p"] == 1 and reason == "DOMAIN_NOT_ACCEPTED" then
-          external_resources[url] = true
-        return true
-      else
-        return verdict
-
+    -- download all external files refenrenced in a blog - usually photos from other sites
+    if urlpos["link_inline_p"] == 1 and reason == "DOMAIN_NOT_ACCEPTED" then
+      external_resources[url] = true
+      return true
+    else
+      return verdict
+    end
+    if not string.match(url, "http[s]?://"..item_value.."%.ownlog.com") then
+      if html == 1 then
+        return false
       end
+    end
+  elseif item_type == "fotolog" then
+    if not string.match(url, "http[s]?://"..item_value.."%.fotolog%.pl") then
+      if html == 1 then
+        return false
+      end
+    end
+  end
 
-
-end
-
-     return verdict
+  return verdict
 
 end
 
@@ -75,42 +81,17 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
 
 
   if err == "AUTHFAILED" then
-      io.stdout:write("Authentication required for " .. url["url"] .. "....ignoring\n")
-      io.stdout:flush()
-
-      if string.match(url.url, "https://") then
-        local newurl = string.gsub(url.url, "https://", "http://")
-        downloaded[newurl] = true
-      else
-        downloaded[url.url] = true
-      end
-
-      return wget.actions.NOTHING
+    io.stdout:write("Authentication required for " .. url["url"] .. "....ignoring\n")
+    io.stdout:flush()
+    if string.match(url.url, "https://") then
+      local newurl = string.gsub(url.url, "https://", "http://")
+      downloaded[newurl] = true
+    elseif not string.match(url.url, "https://") then
+      downloaded[url.url] = true
+    end
+    return wget.actions.NOTHING
   end
 
--- ignore errors related to external resources
-
-  if (status_code == 0 or status_code >= 500 or (status_code >= 400 and status_code ~= 404 and status_code ~= 403))
-          and external_resources[url["url"]] == true then
-
-      io.stdout:write("Error for external resource " .. url["url"] .. "....ignoring\n")
-
-      if status_code == 0 then
-          io.stdout:write("Error code: " .. err .. "\n")
-      end
-      io.stdout:flush()
-
-      if string.match(url.url, "https://") then
-        local newurl = string.gsub(url.url, "https://", "http://")
-        downloaded[newurl] = true
-      else
-        downloaded[url.url] = true
-      end
-
-      return wget.actions.EXIT
-  end
-
-  
   if (status_code >= 200 and status_code <= 399) or status_code == 403 then
     if string.match(url.url, "https://") then
       local newurl = string.gsub(url.url, "https://", "http://")
@@ -119,8 +100,23 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
       downloaded[url.url] = true
     end
   end
-  
-  if status_code >= 500 or
+
+  -- ignore errors related to external resources
+  if (status_code == 0 or status_code >= 500 or (status_code >= 400 and status_code ~= 404 and status_code ~= 403))
+    and external_resources[url["url"]] == true then
+    io.stdout:write("Error for external resource " .. url["url"] .. "....ignoring\n")
+    if status_code == 0 then
+        io.stdout:write("Error code: " .. err .. "\n")
+    end
+    io.stdout:flush()
+    if string.match(url.url, "https://") then
+      local newurl = string.gsub(url.url, "https://", "http://")
+      downloaded[newurl] = true
+    else
+      downloaded[url.url] = true
+    end
+    return wget.actions.EXIT
+  elseif status_code >= 500 or
     (status_code >= 400 and status_code ~= 404 and status_code ~= 403) then
     io.stdout:write("\nServer returned "..http_stat.statcode..". Sleeping.\n")
     io.stdout:flush()
@@ -137,7 +133,6 @@ wget.callbacks.httploop_result = function(url, err, http_stat)
     else
       return wget.actions.CONTINUE
     end
-
   elseif status_code == 0 then
     io.stdout:write("\nServer returned "..http_stat.statcode..". Sleeping.\n")
     io.stdout:flush()
@@ -176,10 +171,10 @@ end
 
 
 wget.callbacks.before_exit = function(exit_status, exit_status_string)
-    if internal_abort == 1 then
-        return exit_status
-    else
-    -- return success, this is workaround for returning success even if external resources from a website fail to load
-        return wget.exits.SUCCESS
-    end
+  if internal_abort == 1 then
+    return exit_status
+  else
+  -- return success, this is workaround for returning success even if external resources from a website fail to load
+    return wget.exits.SUCCESS
+  end
 end
