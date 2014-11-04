@@ -49,22 +49,22 @@ wget.callbacks.download_child_p = function(urlpos, parent, depth, start_url_pars
     if urlpos["link_inline_p"] == 1 and reason == "DOMAIN_NOT_ACCEPTED" then
       external_resources[url] = true
       return true
-    else
-      return verdict
+
     end
+
     if not string.match(url, "http[s]?://"..item_value.."%.ownlog.com") then
       if html == 1 then
         return false
       end
     end
+
   elseif item_type == "fotolog" then
 
-   -- download all external files refenrenced in a blog - usually photos from other sites
+   -- download all external files referenced in a blog - usually photos from other sites
     if urlpos["link_inline_p"] == 1 and reason == "DOMAIN_NOT_ACCEPTED" then
       external_resources[url] = true
       return true
-    else
-      return verdict
+
     end
 
     if not string.match(url, "http[s]?://"..item_value.."%.fotolog%.pl") then
@@ -72,7 +72,8 @@ wget.callbacks.download_child_p = function(urlpos, parent, depth, start_url_pars
         return false
       end
     end
-  end --elseif fotolog
+
+  end
 
   return verdict
 
